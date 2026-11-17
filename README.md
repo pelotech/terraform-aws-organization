@@ -60,7 +60,30 @@ An OU exists to carry policy. Add one only when its accounts need different rule
 
 A map of policy name => where it attaches: `"Root"` or OU paths. OUs and accounts below a target inherit the policy. Service control policies never apply to the management account.
 
-The policies and what each one does are defined in [`policies.tf`](policies.tf). To add one, add an entry to `local.policies` there.
+The policies and what each one does are defined in [`policies.tf`](policies.tf). The library only holds policies that fit any organization unchanged; add one to `local.policies` when more than one organization wants it.
+
+## Your own policies (`policies`)
+
+For a policy specific to one organization, such as one naming its own bucket or regions, or of another type, such as a resource control policy or tag policy. A map of policy name => type, description, content and targets:
+
+```hcl
+enabled_policy_types = ["SERVICE_CONTROL_POLICY", "TAG_POLICY"]
+
+policies = {
+  protect-log-archive = {
+    description = "Nobody deletes or re-policies the log bucket."
+    content     = data.aws_iam_policy_document.protect_log_archive.json
+    targets     = ["Security"]
+  }
+  owner-tag = {
+    type    = "TAG_POLICY"
+    content = jsonencode({ tags = { Owner = { tag_key = { "@@assign" = "Owner" } } } })
+    targets = ["Root"]
+  }
+}
+```
+
+`type` defaults to `SERVICE_CONTROL_POLICY` and must be in `enabled_policy_types`. A name cannot be used both here and in `service_control_policies`. AWS keeps tested starting points for [service control policies](https://github.com/aws-samples/service-control-policy-examples) and [resource control policies](https://github.com/aws-samples/resource-control-policy-examples); attach a new policy to a test OU first.
 
 ## Centralized root access (`centralized_root_access`)
 
@@ -186,6 +209,7 @@ No modules.
 | <a name="input_delegated_administrators"></a> [delegated\_administrators](#input\_delegated\_administrators) | Account name (a key of accounts) => service principals it administers for the organization, e.g. { security = ["health.amazonaws.com"] }. | `map(set(string))` | `{}` | no |
 | <a name="input_enabled_policy_types"></a> [enabled\_policy\_types](#input\_enabled\_policy\_types) | Policy types enabled on the root. Authoritative. When importing an organization, set it to what is live. | `set(string)` | <pre>[<br/>  "SERVICE_CONTROL_POLICY"<br/>]</pre> | no |
 | <a name="input_organizational_units"></a> [organizational\_units](#input\_organizational\_units) | OU paths from the root: "Name" or "Parent/Child". A nested OU's parent must be listed too. | `set(string)` | `[]` | no |
+| <a name="input_policies"></a> [policies](#input\_policies) | The organization's own policies, for anything the library in policies.tf doesn't cover. Policy name => settings:<br/>  - type: SERVICE\_CONTROL\_POLICY (default), RESOURCE\_CONTROL\_POLICY, TAG\_POLICY or another policy type. It must be in enabled\_policy\_types.<br/>  - description: optional.<br/>  - content: the policy document as JSON, for example from jsonencode or aws\_iam\_policy\_document.<br/>  - targets: where it attaches: "Root" or OU paths. OUs below a target inherit it. | <pre>map(object({<br/>    type        = optional(string, "SERVICE_CONTROL_POLICY")<br/>    description = optional(string)<br/>    content     = string<br/>    targets     = set(string)<br/>  }))</pre> | `{}` | no |
 | <a name="input_service_control_policies"></a> [service\_control\_policies](#input\_service\_control\_policies) | Policy name (see policies.tf) => where it attaches: "Root" or OU paths. OUs below a target inherit it. | `map(set(string))` | `{}` | no |
 | <a name="input_trusted_services"></a> [trusted\_services](#input\_trusted\_services) | Service principals with trusted access, e.g. "sso.amazonaws.com". Authoritative: removing one turns its organization access off. | `set(string)` | n/a | yes |
 

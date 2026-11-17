@@ -246,3 +246,75 @@ run "root_access_needs_iam_trusted_access" {
 
   expect_failures = [var.centralized_root_access]
 }
+
+run "own_policies_of_any_enabled_type" {
+  command = plan
+
+  variables {
+    enabled_policy_types = ["SERVICE_CONTROL_POLICY", "TAG_POLICY"]
+    service_control_policies = {
+      deny-leave-organization = ["Workloads"]
+    }
+    policies = {
+      protect-logs = {
+        description = "Keep the log bucket"
+        content     = jsonencode({ Version = "2012-10-17", Statement = [{ Effect = "Deny", Action = "s3:DeleteBucket", Resource = "*" }] })
+        targets     = ["Security"]
+      }
+      owner-tag = {
+        type    = "TAG_POLICY"
+        content = jsonencode({ tags = { Owner = { tag_key = { "@@assign" = "Owner" } } } })
+        targets = ["Root"]
+      }
+    }
+  }
+
+  assert {
+    condition     = toset(keys(aws_organizations_policy.this)) == toset(["deny-leave-organization", "protect-logs", "owner-tag"])
+    error_message = "library and own policies should both be created"
+  }
+
+  assert {
+    condition     = aws_organizations_policy.this["protect-logs"].type == "SERVICE_CONTROL_POLICY" && aws_organizations_policy.this["owner-tag"].type == "TAG_POLICY"
+    error_message = "type defaults to SERVICE_CONTROL_POLICY and can be set"
+  }
+
+  assert {
+    condition     = toset(keys(aws_organizations_policy_attachment.this)) == toset(["deny-leave-organization/Workloads", "protect-logs/Security", "owner-tag/Root"])
+    error_message = "one attachment per (policy, target), for both kinds"
+  }
+}
+
+run "own_policy_type_must_be_enabled" {
+  command = plan
+
+  variables {
+    policies = {
+      owner-tag = {
+        type    = "TAG_POLICY"
+        content = "{}"
+        targets = ["Root"]
+      }
+    }
+  }
+
+  expect_failures = [var.policies]
+}
+
+run "own_policy_name_cannot_shadow_a_library_policy" {
+  command = plan
+
+  variables {
+    service_control_policies = {
+      deny-leave-organization = ["Workloads"]
+    }
+    policies = {
+      deny-leave-organization = {
+        content = "{}"
+        targets = ["Security"]
+      }
+    }
+  }
+
+  expect_failures = [var.policies]
+}
