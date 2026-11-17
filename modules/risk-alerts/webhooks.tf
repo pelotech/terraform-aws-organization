@@ -1,10 +1,15 @@
-# Webhooks where API destinations don't exist (GovCloud): the rule invokes a
-# small Lambda with the same {"text": "..."} message, and the Lambda posts it
-# to each webhook URL.
+# Chat webhooks. The rule invokes one small Lambda with a {"text": "..."}
+# message, and the Lambda posts it to each webhook URL. Slack, Google Chat and
+# anything else that accepts that body work.
+#
+# A Lambda, not EventBridge API destinations, so that commercial and GovCloud
+# (which has no API destinations) work the same way.
 
 locals {
-  forwarder_name  = "${local.name}-forwarder"
-  forwarder_count = local.use_forwarder && length(local.webhooks) > 0 ? 1 : 0
+  forwarder_name = "${local.name}-forwarder"
+
+  # nonsensitive: only whether there are any, not the URLs.
+  forwarder_count = nonsensitive(length(var.webhook_urls)) > 0 ? 1 : 0
 }
 
 # A resource, not the data source: the data source builds the zip at plan
@@ -16,8 +21,8 @@ resource "archive_file" "forwarder" {
   output_path = "${path.module}/forwarder.zip"
 
   source {
-    content  = file("${path.module}/forwarder.py")
-    filename = "index.py"
+    content  = file("${path.module}/forwarder.mjs")
+    filename = "index.mjs"
   }
 }
 
@@ -69,7 +74,7 @@ resource "aws_lambda_function" "forwarder" {
   function_name    = local.forwarder_name
   description      = "Posts AWS Health RISK alerts to chat webhooks"
   role             = aws_iam_role.forwarder[0].arn
-  runtime          = "python3.13"
+  runtime          = "nodejs24.x"
   handler          = "index.handler"
   filename         = archive_file.forwarder[0].output_path
   source_code_hash = archive_file.forwarder[0].output_base64sha256
@@ -106,8 +111,13 @@ resource "aws_cloudwatch_event_target" "forwarder" {
   arn       = aws_lambda_function.forwarder[0].arn
 
   input_transformer {
-    input_paths    = local.webhook_input_paths
-    input_template = local.webhook_input_template
+    input_paths = {
+      type    = "$.detail.eventTypeCode"
+      account = "$.detail.affectedAccount"
+      region  = "$.detail.eventRegion"
+    }
+    # Written by hand: jsonencode would escape the <placeholders>.
+    input_template = "{\"text\": \"AWS Health risk alert: <type> in account <account> (<region>). Open AWS Health in that account for details.\"}"
   }
 
   depends_on = [aws_lambda_permission.forwarder]

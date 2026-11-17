@@ -23,6 +23,3 @@ override.tf.json
 
 # Built by modules/risk-alerts at plan time.
 forwarder.zip
-
-# Python bytecode from testing forwarder.py locally.
-__pycache__/
