@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0](https://github.com/pelotech/terraform-aws-organization/compare/v0.1.1...v0.2.0) (2026-11-17)
+
+
+### Features
+
+* risk-alerts submodule ([#5](https://github.com/pelotech/terraform-aws-organization/issues/5)) ([c7ce983](https://github.com/pelotech/terraform-aws-organization/commit/c7ce983e7358e17421b9f7593ab467f2cfbb6f8b))
+
 ## [0.1.1](https://github.com/pelotech/terraform-aws-organization/compare/v0.1.0...v0.1.1) (2026-11-17)
 
 
