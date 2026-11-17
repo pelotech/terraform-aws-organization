@@ -1,10 +1,12 @@
 # terraform-aws-organization
 
-One AWS organization in code: its trusted services, organizational units (OUs), service control policies (SCPs) and member accounts. A submodule manages IAM Identity Center access.
+One AWS organization in code: its trusted services, organizational units (OUs), service control policies (SCPs) and member accounts. Submodules manage IAM Identity Center access and AWS Health risk alerts.
 
 [`modules/identity-center`](modules/identity-center/) manages permission sets and which group gets which permission set on which accounts.
 
-Neither module declares a provider block or hardcodes a partition, so the same code works in commercial and GovCloud.
+[`modules/risk-alerts`](modules/risk-alerts/) sends AWS Health RISK events, such as exposed access keys, to email and to Slack or Google Chat.
+
+No module here declares a provider block or hardcodes a partition, so the same code works in commercial and GovCloud.
 
 ## How to run it
 
