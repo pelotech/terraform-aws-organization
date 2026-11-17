@@ -100,7 +100,7 @@ delegated_administrators = {
 }
 ```
 
-- The account must be listed in `accounts`, and the service usually needs to be in `trusted_services` first.
+- The account must be listed in `accounts`, and the service in `trusted_services`; the plan fails otherwise.
 - Some services register their own delegated administrator through a dedicated resource, for example `aws_securityhub_organization_admin_account` and `aws_guardduty_organization_admin_account`. Use that resource or this input for a given service, not both.
 - To adopt a delegation that already exists, import it as `module.organization.aws_organizations_delegated_administrator.this["<account>/<service>"]` with the ID `<account id>/<service principal>`.
 

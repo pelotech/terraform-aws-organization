@@ -190,8 +190,24 @@ run "delegated_administrator_must_be_a_listed_account" {
   command = plan
 
   variables {
+    trusted_services = ["sso.amazonaws.com", "health.amazonaws.com"]
     delegated_administrators = {
       missing = ["health.amazonaws.com"]
+    }
+  }
+
+  expect_failures = [var.delegated_administrators]
+}
+
+run "delegated_service_must_be_a_trusted_service" {
+  command = plan
+
+  variables {
+    accounts = {
+      security = { id = "222222222222" }
+    }
+    delegated_administrators = {
+      security = ["health.amazonaws.com"]
     }
   }
 

@@ -79,4 +79,9 @@ variable "delegated_administrators" {
     condition     = alltrue([for account in keys(var.delegated_administrators) : contains(keys(var.accounts), account)])
     error_message = "Each delegated administrator must be an account listed in accounts."
   }
+
+  validation {
+    condition     = alltrue([for service in flatten([for services in values(var.delegated_administrators) : tolist(services)]) : contains(var.trusted_services, service)])
+    error_message = "Each delegated service must also be in trusted_services."
+  }
 }

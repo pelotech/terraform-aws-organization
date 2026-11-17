@@ -3,7 +3,7 @@
 
 locals {
   # One entry per (account, service), keyed "account/service".
-  delegated_administrators = merge([
+  delegations = merge([
     for account, services in var.delegated_administrators : {
       for service in services : "${account}/${service}" => { account = account, service = service }
     }
@@ -11,7 +11,7 @@ locals {
 }
 
 resource "aws_organizations_delegated_administrator" "this" {
-  for_each          = local.delegated_administrators
+  for_each          = local.delegations
   account_id        = local.account_ids[each.value.account]
   service_principal = each.value.service
 
