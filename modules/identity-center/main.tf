@@ -5,7 +5,7 @@ locals {
   # One entry per (permission set, policy), keyed "PermissionSet/Policy".
   permission_set_policies = merge([
     for permission_set, settings in var.permission_sets : {
-      for policy in settings.policies : "${permission_set}/${policy}" => { permission_set = permission_set, policy = policy }
+      for policy in settings.managed_policies : "${permission_set}/${policy}" => { permission_set = permission_set, policy = policy }
     }
   ]...)
 

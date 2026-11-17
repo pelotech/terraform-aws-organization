@@ -70,6 +70,26 @@ run "ous_nest_one_level_only" {
   expect_failures = [var.organizational_units]
 }
 
+run "ou_paths_need_a_name_in_each_segment" {
+  command = plan
+
+  variables {
+    organizational_units = ["A", "A/"]
+  }
+
+  expect_failures = [var.organizational_units]
+}
+
+run "a_top_level_ou_cannot_be_called_root" {
+  command = plan
+
+  variables {
+    organizational_units = ["Root"]
+  }
+
+  expect_failures = [var.organizational_units]
+}
+
 run "policies_attach_by_name_to_root_and_ous" {
   command = plan
 

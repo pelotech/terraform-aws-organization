@@ -36,12 +36,12 @@ module "identity_center" {
     AdministratorAccess = {
       description      = "Full access"
       session_duration = "PT4H"
-      policies         = ["AdministratorAccess"]
+      managed_policies = ["AdministratorAccess"]
     }
     ReadOnlyAccess = {
       description      = "Read only access"
       session_duration = "PT12H"
-      policies         = ["ReadOnlyAccess"]
+      managed_policies = ["ReadOnlyAccess"]
     }
   }
 

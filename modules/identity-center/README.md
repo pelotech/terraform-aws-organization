@@ -15,7 +15,7 @@ module "identity_center" {
     ReadOnlyAccess = {
       description      = "Read only access"
       session_duration = "PT12H"
-      policies         = ["ReadOnlyAccess"]
+      managed_policies = ["ReadOnlyAccess"]
     }
   }
 
@@ -26,7 +26,7 @@ module "identity_center" {
 }
 ```
 
-`policies` are the names of AWS-managed policies. Customer-managed and inline policies are not supported.
+`managed_policies` are the names of AWS-managed policies. Customer-managed and inline policies are not supported.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
@@ -61,9 +61,9 @@ No modules.
 
 | Name | Description | Type | Default | Required |
 | ---- | ----------- | ---- | ------- | :------: |
-| <a name="input_access"></a> [access](#input\_access) | Group display name => permission set name => account names it is granted on. Groups must already exist in the identity store. | `map(map(list(string)))` | n/a | yes |
+| <a name="input_access"></a> [access](#input\_access) | Group display name => permission set name => account names it is granted on. Groups must already exist in the identity store. | `map(map(set(string)))` | n/a | yes |
 | <a name="input_account_ids"></a> [account\_ids](#input\_account\_ids) | Account name => account ID. The names are what `access` refers to. | `map(string)` | n/a | yes |
-| <a name="input_permission_sets"></a> [permission\_sets](#input\_permission\_sets) | Permission set name => settings. `session_duration` is ISO 8601 ("PT8H"); `policies` are AWS-managed policy names. | <pre>map(object({<br/>    description      = string<br/>    session_duration = string<br/>    policies         = list(string)<br/>  }))</pre> | n/a | yes |
+| <a name="input_permission_sets"></a> [permission\_sets](#input\_permission\_sets) | Permission set name => settings. `session_duration` is ISO 8601 ("PT8H"); `managed_policies` are AWS-managed policy names. | <pre>map(object({<br/>    description      = string<br/>    session_duration = string<br/>    managed_policies = set(string)<br/>  }))</pre> | n/a | yes |
 
 ## Outputs
 

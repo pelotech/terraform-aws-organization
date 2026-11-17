@@ -7,12 +7,12 @@ variable "permission_sets" {
   type = map(object({
     description      = string
     session_duration = string
-    policies         = list(string)
+    managed_policies = set(string)
   }))
-  description = "Permission set name => settings. `session_duration` is ISO 8601 (\"PT8H\"); `policies` are AWS-managed policy names."
+  description = "Permission set name => settings. `session_duration` is ISO 8601 (\"PT8H\"); `managed_policies` are AWS-managed policy names."
 }
 
 variable "access" {
-  type        = map(map(list(string)))
+  type        = map(map(set(string)))
   description = "Group display name => permission set name => account names it is granted on. Groups must already exist in the identity store."
 }
