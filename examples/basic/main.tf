@@ -6,7 +6,7 @@ provider "aws" {
 module "organization" {
   source = "../.."
 
-  trusted_services = ["sso.amazonaws.com"]
+  trusted_services = ["sso.amazonaws.com", "health.amazonaws.com"]
 
   organizational_units = [
     "Security",
@@ -24,6 +24,11 @@ module "organization" {
     security   = { email = "aws-security@example.com", parent = "Security" }
     prod       = { email = "aws-prod@example.com", parent = "Workloads/Prod" }
     nonprod    = { email = "aws-nonprod@example.com", parent = "Workloads/NonProd" }
+  }
+
+  # The security account reads AWS Health events for the whole organization.
+  delegated_administrators = {
+    security = ["health.amazonaws.com"]
   }
 }
 

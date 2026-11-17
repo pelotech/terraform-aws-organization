@@ -69,3 +69,19 @@ variable "accounts" {
     error_message = "Set id (listed for lookup only) or email (managed here) on each account, not both."
   }
 }
+
+variable "delegated_administrators" {
+  type        = map(set(string))
+  default     = {}
+  description = "Account name (a key of accounts) => service principals it administers for the organization, e.g. { security = [\"health.amazonaws.com\"] }."
+
+  validation {
+    condition     = alltrue([for account in keys(var.delegated_administrators) : contains(keys(var.accounts), account)])
+    error_message = "Each delegated administrator must be an account listed in accounts."
+  }
+
+  validation {
+    condition     = alltrue([for service in flatten([for services in values(var.delegated_administrators) : tolist(services)]) : contains(var.trusted_services, service)])
+    error_message = "Each delegated service must also be in trusted_services."
+  }
+}

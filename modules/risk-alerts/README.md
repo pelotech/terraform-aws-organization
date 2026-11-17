@@ -35,7 +35,7 @@ A delegated administrator keeps the alerting out of the management account. Skip
 1. **Turn on organizational view**, once, signed in to the management account. In the [AWS Health Dashboard](https://health.aws.amazon.com/health/home), go to **Your organization health** > **Configurations** and choose **Enable organizational view**. The organization must have all features enabled. The CLI (`aws health enable-health-service-access-for-organization --region us-east-1`) needs a Business support plan or higher; the console works on any plan.
 
    If the organization is managed with this repository's root module, add `health.amazonaws.com` to its `trusted_services` afterwards. Turning the view on already enabled that trusted access, so the plan shows no change. Without it, the next apply turns the trusted access off. Listing it alone does not turn the view on.
-2. **Register the delegated administrator**, once, from the management account. Either run the command below, or manage it in Terraform as [`examples/risk-alerts`](../../examples/risk-alerts) does.
+2. **Register the delegated administrator**, once, from the management account. Either run the command below, or, if the organization is managed with this repository's root module, set `delegated_administrators = { <account> = ["health.amazonaws.com"] }` there.
 
    ```bash
    aws organizations register-delegated-administrator \

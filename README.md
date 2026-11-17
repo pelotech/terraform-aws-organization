@@ -1,6 +1,6 @@
 # terraform-aws-organization
 
-One AWS organization in code: its trusted services, organizational units (OUs), service control policies (SCPs) and member accounts. Submodules manage IAM Identity Center access and AWS Health risk alerts.
+One AWS organization in code: its trusted services, organizational units (OUs), service control policies (SCPs), member accounts and delegated administrators. Submodules manage IAM Identity Center access and AWS Health risk alerts.
 
 [`modules/identity-center`](modules/identity-center/) manages permission sets and which group gets which permission set on which accounts.
 
@@ -90,6 +90,20 @@ terraform state rm 'module.organization.aws_organizations_account.this["prod"]'
 
 Without that step the plan fails on `prevent_destroy`. A `removed` block cannot do this, because it cannot target one instance of a resource.
 
+## Delegated administrators (`delegated_administrators`)
+
+A map of account name => the service principals that account administers for the whole organization. It keeps day-to-day work, such as reading AWS Health events for every account, out of the management account.
+
+```hcl
+delegated_administrators = {
+  security = ["health.amazonaws.com"]
+}
+```
+
+- The account must be listed in `accounts`, and the service in `trusted_services`; the plan fails otherwise.
+- Some services register their own delegated administrator through a dedicated resource, for example `aws_securityhub_organization_admin_account` and `aws_guardduty_organization_admin_account`. Use that resource or this input for a given service, not both.
+- To adopt a delegation that already exists, import it as `module.organization.aws_organizations_delegated_administrator.this["<account>/<service>"]` with the ID `<account id>/<service principal>`.
+
 ## Adopting an existing organization
 
 Do it in two changes, so each plan is easy to check.
@@ -156,6 +170,7 @@ No modules.
 | ---- | ---- |
 | [aws_iam_organizations_features.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_organizations_features) | resource |
 | [aws_organizations_account.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_account) | resource |
+| [aws_organizations_delegated_administrator.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_delegated_administrator) | resource |
 | [aws_organizations_organization.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_organization) | resource |
 | [aws_organizations_organizational_unit.nested](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_organizational_unit) | resource |
 | [aws_organizations_organizational_unit.top](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_organizational_unit) | resource |
@@ -168,6 +183,7 @@ No modules.
 | ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_accounts"></a> [accounts](#input\_accounts) | Account name => settings. List every account, including the management account.<br/>Set exactly one of id and email.<br/>  - id: the account ID, for an account that is only listed for lookup.<br/>  - email: root email, for an account managed here (created or imported).<br/>  - name: account name in AWS, when it differs from the key.<br/>  - parent: "Root" or an OU path. Only used for accounts managed here. | <pre>map(object({<br/>    id     = optional(string)<br/>    email  = optional(string)<br/>    name   = optional(string)<br/>    parent = optional(string, "Root")<br/>  }))</pre> | `{}` | no |
 | <a name="input_centralized_root_access"></a> [centralized\_root\_access](#input\_centralized\_root\_access) | Turn on centralized root access (RootCredentialsManagement and RootSessions). Needs iam.amazonaws.com in trusted\_services. Accounts the organization creates afterwards get no root credentials; existing accounts keep theirs. | `bool` | `false` | no |
+| <a name="input_delegated_administrators"></a> [delegated\_administrators](#input\_delegated\_administrators) | Account name (a key of accounts) => service principals it administers for the organization, e.g. { security = ["health.amazonaws.com"] }. | `map(set(string))` | `{}` | no |
 | <a name="input_enabled_policy_types"></a> [enabled\_policy\_types](#input\_enabled\_policy\_types) | Policy types enabled on the root. Authoritative. When importing an organization, set it to what is live. | `set(string)` | <pre>[<br/>  "SERVICE_CONTROL_POLICY"<br/>]</pre> | no |
 | <a name="input_organizational_units"></a> [organizational\_units](#input\_organizational\_units) | OU paths from the root: "Name" or "Parent/Child". A nested OU's parent must be listed too. | `set(string)` | `[]` | no |
 | <a name="input_service_control_policies"></a> [service\_control\_policies](#input\_service\_control\_policies) | Policy name (see policies.tf) => where it attaches: "Root" or OU paths. OUs below a target inherit it. | `map(set(string))` | `{}` | no |
