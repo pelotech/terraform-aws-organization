@@ -6,8 +6,26 @@
   'pre-commit': {
     enabled: true,
   },
+  // flake.lock: off by default. Refresh the whole lock on a schedule instead
+  // of opening a PR each time nixos-unstable moves.
+  nix: {
+    enabled: true,
+  },
+  lockFileMaintenance: {
+    enabled: true,
+  },
   minimumReleaseAge: '7 days',
   packageRules: [
+    {
+      description: 'flake inputs are updated by lockFileMaintenance only',
+      matchManagers: [
+        'nix',
+      ],
+      matchUpdateTypes: [
+        'digest',
+      ],
+      enabled: false,
+    },
     {
       description: 'Group pre-commit hook and tflint plugin updates into one PR',
       matchManagers: [

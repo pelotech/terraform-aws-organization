@@ -34,12 +34,12 @@ variables {
     AdministratorAccess = {
       description      = "Full access"
       session_duration = "PT4H"
-      policies         = ["AdministratorAccess"]
+      managed_policies = ["AdministratorAccess"]
     }
     Operator = {
       description      = "Read plus support"
       session_duration = "PT8H"
-      policies         = ["ReadOnlyAccess", "AWSSupportAccess"]
+      managed_policies = ["ReadOnlyAccess", "AWSSupportAccess"]
     }
   }
   access = {
