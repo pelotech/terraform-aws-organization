@@ -26,7 +26,7 @@ module "identity_center" {
 }
 ```
 
-`managed_policies` are the names of AWS-managed policies. Customer-managed and inline policies are not supported.
+`managed_policies` are the names of AWS-managed policies. `inline_policy` adds an IAM policy JSON document to the permission set, for permissions no managed policy covers narrowly enough. Build it with `aws_iam_policy_document` or `jsonencode`. A permission set can have either or both. Customer-managed policies are not supported.
 
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
@@ -53,6 +53,7 @@ No modules.
 | [aws_ssoadmin_account_assignment.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssoadmin_account_assignment) | resource |
 | [aws_ssoadmin_managed_policy_attachment.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssoadmin_managed_policy_attachment) | resource |
 | [aws_ssoadmin_permission_set.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssoadmin_permission_set) | resource |
+| [aws_ssoadmin_permission_set_inline_policy.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/ssoadmin_permission_set_inline_policy) | resource |
 | [aws_identitystore_group.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/identitystore_group) | data source |
 | [aws_partition.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/partition) | data source |
 | [aws_ssoadmin_instances.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/ssoadmin_instances) | data source |
@@ -63,7 +64,7 @@ No modules.
 | ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_access"></a> [access](#input\_access) | Group display name => permission set name => account names it is granted on. Groups must already exist in the identity store. | `map(map(set(string)))` | n/a | yes |
 | <a name="input_account_ids"></a> [account\_ids](#input\_account\_ids) | Account name => account ID. The names are what `access` refers to. | `map(string)` | n/a | yes |
-| <a name="input_permission_sets"></a> [permission\_sets](#input\_permission\_sets) | Permission set name => settings. `session_duration` is ISO 8601 ("PT8H"); `managed_policies` are AWS-managed policy names. | <pre>map(object({<br/>    description      = string<br/>    session_duration = string<br/>    managed_policies = set(string)<br/>  }))</pre> | n/a | yes |
+| <a name="input_permission_sets"></a> [permission\_sets](#input\_permission\_sets) | Permission set name => settings. `session_duration` is ISO 8601 ("PT8H"); `managed_policies` are AWS-managed policy names; `inline_policy` is an IAM policy JSON document, for permissions no managed policy covers narrowly enough. | <pre>map(object({<br/>    description      = string<br/>    session_duration = string<br/>    managed_policies = optional(set(string), [])<br/>    inline_policy    = optional(string)<br/>  }))</pre> | n/a | yes |
 
 ## Outputs
 

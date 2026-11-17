@@ -40,6 +40,18 @@ variables {
       description      = "Read plus support"
       session_duration = "PT8H"
       managed_policies = ["ReadOnlyAccess", "AWSSupportAccess"]
+      inline_policy = jsonencode({
+        Version   = "2012-10-17"
+        Statement = [{ Effect = "Allow", Action = "cloudwatch:PutMetricAlarm", Resource = "*" }]
+      })
+    }
+    InlineOnly = {
+      description      = "Inline policy only"
+      session_duration = "PT1H"
+      inline_policy = jsonencode({
+        Version   = "2012-10-17"
+        Statement = [{ Effect = "Allow", Action = "s3:ListAllMyBuckets", Resource = "*" }]
+      })
     }
   }
   access = {
@@ -56,13 +68,18 @@ run "permission_sets_policies_and_assignments" {
   }
 
   assert {
-    condition     = toset(keys(aws_ssoadmin_permission_set.this)) == toset(["AdministratorAccess", "Operator"])
+    condition     = toset(keys(aws_ssoadmin_permission_set.this)) == toset(["AdministratorAccess", "Operator", "InlineOnly"])
     error_message = "one permission set per entry"
   }
 
   assert {
     condition     = toset(keys(aws_ssoadmin_managed_policy_attachment.this)) == toset(["AdministratorAccess/AdministratorAccess", "Operator/ReadOnlyAccess", "Operator/AWSSupportAccess"])
     error_message = "one attachment per (permission set, policy)"
+  }
+
+  assert {
+    condition     = toset(keys(aws_ssoadmin_permission_set_inline_policy.this)) == toset(["Operator", "InlineOnly"]) && strcontains(aws_ssoadmin_permission_set_inline_policy.this["Operator"].inline_policy, "cloudwatch:PutMetricAlarm")
+    error_message = "an inline policy for each permission set that sets one, with or without managed policies"
   }
 
   assert {
