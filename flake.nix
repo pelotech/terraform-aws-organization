@@ -29,6 +29,8 @@
               prek
               tflint
               terraform-docs
+              # tests/test_forwarder.py
+              python3
             ];
           };
         }

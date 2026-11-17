@@ -3,7 +3,7 @@
 mock_provider "aws" {
   mock_data "aws_partition" {
     defaults = {
-      partition = "aws-us-gov"
+      partition = "aws"
     }
   }
   # The topic module combines policy documents; mocks need valid JSON.
@@ -51,10 +51,9 @@ run "rule_and_topic" {
     email_endpoints = ["incidents@example.com"]
   }
 
-  # The mocked partition is aws-us-gov.
   assert {
-    condition     = aws_cloudwatch_event_rule.this.region == "us-gov-west-1" && aws_cloudwatch_event_target.topic.region == "us-gov-west-1"
-    error_message = "GovCloud rule and target should be in us-gov-west-1, where AWS Health sends these events"
+    condition     = aws_cloudwatch_event_rule.this.region == "us-east-1" && aws_cloudwatch_event_target.topic.region == "us-east-1"
+    error_message = "commercial rule and target should be in us-east-1, where AWS Health sends these events"
   }
 
   assert {
@@ -68,44 +67,16 @@ run "rule_and_topic" {
   }
 
   assert {
-    condition     = length(aws_cloudwatch_event_connection.webhook) == 0 && length(aws_iam_role.webhook) == 0 && length(aws_cloudwatch_event_target.webhook) == 0
-    error_message = "no webhook_urls should create no connection, role or webhook target"
+    condition     = length(aws_cloudwatch_event_connection.webhook) + length(aws_iam_role.webhook) + length(aws_cloudwatch_event_target.webhook) + length(aws_lambda_function.forwarder) == 0
+    error_message = "no webhook_urls should create no connection, role, webhook target or forwarder"
   }
 }
 
-run "commercial_region" {
+run "webhooks_use_api_destinations" {
   command = plan
 
   module {
     source = "./modules/risk-alerts"
-  }
-
-  override_data {
-    target = data.aws_partition.current
-    values = {
-      partition = "aws"
-    }
-  }
-
-  assert {
-    condition     = aws_cloudwatch_event_rule.this.region == "us-east-1"
-    error_message = "commercial rule should be in us-east-1"
-  }
-}
-
-run "webhooks" {
-  command = plan
-
-  module {
-    source = "./modules/risk-alerts"
-  }
-
-  # API destinations exist in commercial only.
-  override_data {
-    target = data.aws_partition.current
-    values = {
-      partition = "aws"
-    }
   }
 
   variables {
@@ -131,13 +102,13 @@ run "webhooks" {
   }
 
   assert {
-    condition     = length(aws_lambda_function.forwarder) == 0
-    error_message = "no forwarder where API destinations exist"
+    condition     = strcontains(jsondecode(aws_cloudwatch_event_target.webhook["secops-chat"].input_transformer[0].input_template).text, "<type>")
+    error_message = "webhook body should be JSON with a text field holding unescaped placeholders"
   }
 
   assert {
-    condition     = strcontains(jsondecode(aws_cloudwatch_event_target.webhook["secops-chat"].input_transformer[0].input_template).text, "<type>")
-    error_message = "webhook body should be JSON with a text field holding unescaped placeholders"
+    condition     = length(aws_lambda_function.forwarder) == 0
+    error_message = "no forwarder where API destinations exist"
   }
 }
 
@@ -157,6 +128,35 @@ run "webhook_urls_must_be_https" {
   expect_failures = [var.webhook_urls]
 }
 
+run "govcloud_region" {
+  command = plan
+
+  module {
+    source = "./modules/risk-alerts"
+  }
+
+  override_data {
+    target = data.aws_partition.current
+    values = {
+      partition = "aws-us-gov"
+    }
+  }
+
+  variables {
+    email_endpoints = ["incidents@example.com"]
+  }
+
+  assert {
+    condition     = aws_cloudwatch_event_rule.this.region == "us-gov-west-1" && aws_cloudwatch_event_target.topic.region == "us-gov-west-1"
+    error_message = "GovCloud rule and target should be in us-gov-west-1"
+  }
+
+  assert {
+    condition     = length(aws_lambda_function.forwarder) == 0 && length(aws_iam_role.forwarder) == 0
+    error_message = "no forwarder without webhook_urls"
+  }
+}
+
 run "govcloud_webhooks_use_the_forwarder" {
   command = plan
 
@@ -164,7 +164,14 @@ run "govcloud_webhooks_use_the_forwarder" {
     source = "./modules/risk-alerts"
   }
 
-  # The mocked partition is aws-us-gov, which has no API destinations.
+  # GovCloud has no API destinations.
+  override_data {
+    target = data.aws_partition.current
+    values = {
+      partition = "aws-us-gov"
+    }
+  }
+
   variables {
     webhook_urls = {
       secops-chat  = sensitive("https://chat.googleapis.com/v1/spaces/AAAA/messages?key=k&token=t")
@@ -173,8 +180,8 @@ run "govcloud_webhooks_use_the_forwarder" {
   }
 
   assert {
-    condition     = length(aws_lambda_function.forwarder) == 1 && aws_lambda_function.forwarder[0].region == "us-gov-west-1" && length(aws_sns_topic_subscription.forwarder) == 1
-    error_message = "GovCloud webhooks should go through one Lambda subscribed to the topic, in us-gov-west-1"
+    condition     = length(aws_lambda_function.forwarder) == 1 && aws_lambda_function.forwarder[0].region == "us-gov-west-1"
+    error_message = "GovCloud webhooks should go through one Lambda in us-gov-west-1"
   }
 
   assert {
@@ -183,24 +190,12 @@ run "govcloud_webhooks_use_the_forwarder" {
   }
 
   assert {
-    condition     = length(aws_cloudwatch_event_api_destination.webhook) == 0 && length(aws_cloudwatch_event_connection.webhook) == 0 && length(aws_iam_role.webhook) == 0
-    error_message = "no API destination, connection or role in GovCloud"
-  }
-}
-
-run "govcloud_without_webhooks_has_no_forwarder" {
-  command = plan
-
-  module {
-    source = "./modules/risk-alerts"
-  }
-
-  variables {
-    email_endpoints = ["incidents@example.com"]
+    condition     = aws_cloudwatch_event_target.forwarder[0].input_transformer[0].input_template == local.webhook_input_template && strcontains(jsondecode(local.webhook_input_template).text, "<type>")
+    error_message = "the forwarder should get the same message as an API destination"
   }
 
   assert {
-    condition     = length(aws_lambda_function.forwarder) == 0 && length(aws_iam_role.forwarder) == 0
-    error_message = "no forwarder without webhook_urls"
+    condition     = length(aws_cloudwatch_event_api_destination.webhook) + length(aws_cloudwatch_event_connection.webhook) + length(aws_iam_role.webhook) == 0
+    error_message = "no API destination, connection or role in GovCloud"
   }
 }

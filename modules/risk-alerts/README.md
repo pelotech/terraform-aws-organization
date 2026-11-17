@@ -4,7 +4,7 @@ AWS Health raises a RISK event when it finds a problem such as an access key exp
 
 - an EventBridge rule that matches AWS Health events whose service is `RISK`;
 - an SNS topic that only that rule can publish to, built with [`terraform-aws-modules/sns`](https://registry.terraform.io/modules/terraform-aws-modules/sns/aws), with an email subscription for each address in `email_endpoints`;
-- for each entry in `webhook_urls`, a one-line message posted to that webhook: through an EventBridge API destination, or in GovCloud, which has none, through a small Lambda subscribed to the topic.
+- for each entry in `webhook_urls`, a one-line message posted to that webhook: through an EventBridge API destination, or in GovCloud, which has none, through one small Lambda that the rule invokes.
 
 Both inputs are optional, so each team sets only what it uses.
 
@@ -46,9 +46,10 @@ If a step is missed, the module still applies cleanly and alerts for its own acc
 
 - **Region.** Everything is created in `us-east-1` (`us-gov-west-1` in GovCloud), whatever region the provider uses. That is where AWS Health sends events that aren't tied to a region, such as exposed IAM access keys. A RISK event tied to another region is not picked up.
 - **Email.** Each address has to confirm the subscription AWS emails it. The email is the raw event JSON: look at `detail.eventTypeCode`, `detail.affectedAccount` and `detail.affectedEntities`. For other destinations, subscribe to the `topic_arn` output.
-- **Webhooks.** Create an incoming webhook in the [Slack channel](https://api.slack.com/messaging/webhooks) or [Google Chat space](https://developers.google.com/workspace/chat/quickstart/webhooks) and pass its URL. Anything else that accepts `{"text": "..."}` works too. The message reads: `AWS Health risk alert: AWS_RISK_CREDENTIALS_EXPOSED in account 111111111111 (us-east-1). Open AWS Health in that account for details.`
-- **Any webhook that takes `{"text": "..."}`.** The body is plain JSON with a single `text` field and no Slack-specific formatting, so the same input works for Slack, Google Chat and other chat tools.
-- **GovCloud uses a Lambda.** GovCloud doesn't offer EventBridge API destinations, so there the module creates one Python Lambda (`health-risk-alerts-forwarder`) that is subscribed to the topic and posts the same message to every webhook. The inputs are the same in both partitions. If a webhook rejects the message, the invocation fails and shows in the function's error metric and log group.
+- **Webhooks.** Create an incoming webhook in the [Slack channel](https://api.slack.com/messaging/webhooks) or [Google Chat space](https://developers.google.com/workspace/chat/quickstart/webhooks) and pass its URL. The body is plain JSON with a single `text` field and no Slack-specific formatting, so anything else that accepts `{"text": "..."}` works too. The message reads: `AWS Health risk alert: AWS_RISK_CREDENTIALS_EXPOSED in account 111111111111 (us-east-1). Open AWS Health in that account for details.`
+- **GovCloud uses a Lambda.** GovCloud doesn't offer EventBridge API destinations, so there the rule invokes one Lambda (`health-risk-alerts-forwarder`) that posts the same message to every webhook. The inputs are the same in both partitions.
+  - If a webhook rejects the message, the invocation fails. That shows in the function's error metric and log group, and AWS retries it twice, so the webhooks that did accept it can get the alert up to three times.
+  - The Lambda's zip is built on the machine that runs Terraform, at plan and at apply, so nothing needs to be committed or uploaded separately.
 - **Webhook URLs are secrets.** Anyone who has one can post to the channel. Pass them from sensitive variables. They are stored in Terraform state and are visible to anyone who can read EventBridge API destinations in the account (in GovCloud, the Lambda's environment variables).
 - **Encryption.** The topic isn't encrypted at rest. EventBridge can't publish through the AWS managed SNS key, and the messages carry event metadata, not secrets.
 - **Testing.** A real RISK event can't be triggered on demand, so test the two ends: publish a message to the topic, and `curl` a `{"text": "test"}` body to each webhook URL.
@@ -58,7 +59,7 @@ If a step is missed, the module still applies cleanly and alerts for its own acc
 This module replaces the `risk_alerts` input of [`pelotech/terraform-aws-account-bootstrap`](https://github.com/pelotech/terraform-aws-account-bootstrap) (up to `v0.3.x`). Nothing is recreated if state is moved.
 
 - **The module call only set `risk_alerts`:** keep the call's name, change its `source` to this module and lift `email_endpoints` and `webhook_urls` to the top level. The `moved` blocks in [`moved.tf`](moved.tf) do the rest. The plan must show moves only.
-- **The module call also set other inputs** (`github`, `state_bucket`, ...): add a new call to this module and, in your root, one `moved` block per resource from the old call to the new one, for example:
+- **The module call also set other inputs** (`github`, `state_bucket`, ...): remove `risk_alerts` from that call, add a new call to this module and, in your root, one `moved` block per resource from the old call to the new one, for example:
 
   ```hcl
   moved {
@@ -77,14 +78,14 @@ The output is now `topic_arn` (was `risk_alerts_topic_arn`).
 | Name | Version |
 | ---- | ------- |
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.9.0 |
-| <a name="requirement_archive"></a> [archive](#requirement\_archive) | >= 2.0 |
+| <a name="requirement_archive"></a> [archive](#requirement\_archive) | >= 2.8 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 6.0 |
 
 ## Providers
 
 | Name | Version |
 | ---- | ------- |
-| <a name="provider_archive"></a> [archive](#provider\_archive) | >= 2.0 |
+| <a name="provider_archive"></a> [archive](#provider\_archive) | >= 2.8 |
 | <a name="provider_aws"></a> [aws](#provider\_aws) | >= 6.0 |
 
 ## Modules
@@ -97,9 +98,11 @@ The output is now `topic_arn` (was `risk_alerts_topic_arn`).
 
 | Name | Type |
 | ---- | ---- |
+| [archive_file.forwarder](https://registry.terraform.io/providers/hashicorp/archive/latest/docs/resources/file) | resource |
 | [aws_cloudwatch_event_api_destination.webhook](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_api_destination) | resource |
 | [aws_cloudwatch_event_connection.webhook](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_connection) | resource |
 | [aws_cloudwatch_event_rule.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_rule) | resource |
+| [aws_cloudwatch_event_target.forwarder](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_target) | resource |
 | [aws_cloudwatch_event_target.topic](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_target) | resource |
 | [aws_cloudwatch_event_target.webhook](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_event_target) | resource |
 | [aws_cloudwatch_log_group.forwarder](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/cloudwatch_log_group) | resource |
@@ -109,8 +112,6 @@ The output is now `topic_arn` (was `risk_alerts_topic_arn`).
 | [aws_iam_role_policy.webhook](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_role_policy) | resource |
 | [aws_lambda_function.forwarder](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_function) | resource |
 | [aws_lambda_permission.forwarder](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lambda_permission) | resource |
-| [aws_sns_topic_subscription.forwarder](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/sns_topic_subscription) | resource |
-| [archive_file.forwarder](https://registry.terraform.io/providers/hashicorp/archive/latest/docs/data-sources/file) | data source |
 | [aws_partition.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/partition) | data source |
 
 ## Inputs

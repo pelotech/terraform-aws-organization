@@ -17,9 +17,18 @@ locals {
   webhooks = toset(nonsensitive(keys(var.webhook_urls)))
 
   # GovCloud has no EventBridge API destinations, so webhooks go through a
-  # Lambda subscribed to the topic there (forwarder.tf).
+  # Lambda there (forwarder.tf).
   use_forwarder = data.aws_partition.current.partition == "aws-us-gov"
   api_webhooks  = local.use_forwarder ? toset([]) : local.webhooks
+
+  # The message every webhook gets, as an EventBridge input transformer.
+  webhook_input_paths = {
+    type    = "$.detail.eventTypeCode"
+    account = "$.detail.affectedAccount"
+    region  = "$.detail.eventRegion"
+  }
+  # Written by hand: jsonencode would escape the <placeholders>.
+  webhook_input_template = "{\"text\": \"AWS Health risk alert: <type> in account <account> (<region>). Open AWS Health in that account for details.\"}"
 }
 
 resource "aws_cloudwatch_event_rule" "this" {
@@ -149,12 +158,7 @@ resource "aws_cloudwatch_event_target" "webhook" {
   role_arn  = aws_iam_role.webhook[0].arn
 
   input_transformer {
-    input_paths = {
-      type    = "$.detail.eventTypeCode"
-      account = "$.detail.affectedAccount"
-      region  = "$.detail.eventRegion"
-    }
-    # Written by hand: jsonencode would escape the <placeholders>.
-    input_template = "{\"text\": \"AWS Health risk alert: <type> in account <account> (<region>). Open AWS Health in that account for details.\"}"
+    input_paths    = local.webhook_input_paths
+    input_template = local.webhook_input_template
   }
 }
