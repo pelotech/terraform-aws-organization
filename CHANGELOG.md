@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.1](https://github.com/pelotech/terraform-aws-organization/compare/v0.1.0...v0.1.1) (2026-11-17)
+
+
+### Bug Fixes
+
+* tighten module inputs and repo tooling after review ([#3](https://github.com/pelotech/terraform-aws-organization/issues/3)) ([6ec1854](https://github.com/pelotech/terraform-aws-organization/commit/6ec18543e3459a8c66747ef9d30f645fedd61ef7))
+
 ## 0.1.0 (2026-11-17)
 
 
