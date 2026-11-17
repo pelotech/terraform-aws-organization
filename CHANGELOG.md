@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.3.0](https://github.com/pelotech/terraform-aws-organization/compare/v0.2.0...v0.3.0) (2026-11-17)
+
+
+### Features
+
+* centralized root access ([#8](https://github.com/pelotech/terraform-aws-organization/issues/8)) ([c3adc4c](https://github.com/pelotech/terraform-aws-organization/commit/c3adc4cc614ff00ad977ca8c6f01cb51a00d33d5))
+* delegated administrators input ([#7](https://github.com/pelotech/terraform-aws-organization/issues/7)) ([ac337c0](https://github.com/pelotech/terraform-aws-organization/commit/ac337c033bcd16e85a30b71cc7bfe5a43728f184))
+* **identity-center:** inline policies on permission sets ([#9](https://github.com/pelotech/terraform-aws-organization/issues/9)) ([e9b2aee](https://github.com/pelotech/terraform-aws-organization/commit/e9b2aee6f78b17ba1ace907776aee512a90dcb84))
+* organization-specific policies of any type ([#11](https://github.com/pelotech/terraform-aws-organization/issues/11)) ([2810695](https://github.com/pelotech/terraform-aws-organization/commit/28106957a0d1a182e69f8d16cce18ac4ecca3028))
+
 ## [0.2.0](https://github.com/pelotech/terraform-aws-organization/compare/v0.1.1...v0.2.0) (2026-11-17)
 
 
