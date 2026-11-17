@@ -23,6 +23,17 @@ resource "aws_organizations_organizational_unit" "nested" {
   parent_id = aws_organizations_organizational_unit.top[dirname(each.key)].id
 }
 
+# Centralized root access: accounts the organization creates get no root
+# credentials, and the management account (or a delegated administrator) can run
+# the few tasks that need root in a member account.
+resource "aws_iam_organizations_features" "this" {
+  count            = var.centralized_root_access ? 1 : 0
+  enabled_features = ["RootCredentialsManagement", "RootSessions"]
+
+  # Needs iam.amazonaws.com trusted access first.
+  depends_on = [aws_organizations_organization.this]
+}
+
 locals {
   root_id = aws_organizations_organization.this.roots[0].id
 

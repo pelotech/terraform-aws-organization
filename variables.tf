@@ -3,6 +3,17 @@ variable "trusted_services" {
   description = "Service principals with trusted access, e.g. \"sso.amazonaws.com\". Authoritative: removing one turns its organization access off."
 }
 
+variable "centralized_root_access" {
+  type        = bool
+  default     = false
+  description = "Turn on centralized root access (RootCredentialsManagement and RootSessions). Needs iam.amazonaws.com in trusted_services. Accounts the organization creates afterwards get no root credentials; existing accounts keep theirs."
+
+  validation {
+    condition     = !var.centralized_root_access || contains(var.trusted_services, "iam.amazonaws.com")
+    error_message = "centralized_root_access needs \"iam.amazonaws.com\" in trusted_services."
+  }
+}
+
 variable "enabled_policy_types" {
   type        = set(string)
   default     = ["SERVICE_CONTROL_POLICY"]

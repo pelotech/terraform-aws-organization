@@ -53,6 +53,13 @@ resource "aws_ssoadmin_managed_policy_attachment" "this" {
   managed_policy_arn = "arn:${data.aws_partition.current.partition}:iam::aws:policy/${each.value.policy}"
 }
 
+resource "aws_ssoadmin_permission_set_inline_policy" "this" {
+  for_each           = { for name, settings in var.permission_sets : name => settings.inline_policy if settings.inline_policy != null }
+  instance_arn       = local.instance_arn
+  permission_set_arn = aws_ssoadmin_permission_set.this[each.key].arn
+  inline_policy      = each.value
+}
+
 resource "aws_ssoadmin_account_assignment" "this" {
   for_each           = local.assignments
   instance_arn       = local.instance_arn

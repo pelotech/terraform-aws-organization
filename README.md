@@ -62,6 +62,17 @@ A map of policy name => where it attaches: `"Root"` or OU paths. OUs and account
 
 The policies and what each one does are defined in [`policies.tf`](policies.tf). To add one, add an entry to `local.policies` there.
 
+## Centralized root access (`centralized_root_access`)
+
+Set it to `true` to turn on IAM's `RootCredentialsManagement` and `RootSessions` features for the organization. It needs `iam.amazonaws.com` in `trusted_services`; the plan fails without it.
+
+- Accounts the organization creates afterwards get no root credentials. Turn it on before creating accounts, so they never have any.
+- Existing and invited accounts keep their root credentials until you delete them.
+- The management account, or a delegated administrator for IAM root access management, can run the few tasks that need root in a member account, such as removing an S3 bucket policy that denies everyone.
+- The management account's own root user is not affected.
+
+Turning it off again removes the features and IAM's trusted access. Not yet tried in GovCloud.
+
 ## Accounts (`accounts`)
 
 List every account once, including the management account. Each entry is name => settings, with exactly one of `id` and `email`:
@@ -157,6 +168,7 @@ No modules.
 
 | Name | Type |
 | ---- | ---- |
+| [aws_iam_organizations_features.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/iam_organizations_features) | resource |
 | [aws_organizations_account.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_account) | resource |
 | [aws_organizations_delegated_administrator.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_delegated_administrator) | resource |
 | [aws_organizations_organization.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/organizations_organization) | resource |
@@ -170,6 +182,7 @@ No modules.
 | Name | Description | Type | Default | Required |
 | ---- | ----------- | ---- | ------- | :------: |
 | <a name="input_accounts"></a> [accounts](#input\_accounts) | Account name => settings. List every account, including the management account.<br/>Set exactly one of id and email.<br/>  - id: the account ID, for an account that is only listed for lookup.<br/>  - email: root email, for an account managed here (created or imported).<br/>  - name: account name in AWS, when it differs from the key.<br/>  - parent: "Root" or an OU path. Only used for accounts managed here. | <pre>map(object({<br/>    id     = optional(string)<br/>    email  = optional(string)<br/>    name   = optional(string)<br/>    parent = optional(string, "Root")<br/>  }))</pre> | `{}` | no |
+| <a name="input_centralized_root_access"></a> [centralized\_root\_access](#input\_centralized\_root\_access) | Turn on centralized root access (RootCredentialsManagement and RootSessions). Needs iam.amazonaws.com in trusted\_services. Accounts the organization creates afterwards get no root credentials; existing accounts keep theirs. | `bool` | `false` | no |
 | <a name="input_delegated_administrators"></a> [delegated\_administrators](#input\_delegated\_administrators) | Account name (a key of accounts) => service principals it administers for the organization, e.g. { security = ["health.amazonaws.com"] }. | `map(set(string))` | `{}` | no |
 | <a name="input_enabled_policy_types"></a> [enabled\_policy\_types](#input\_enabled\_policy\_types) | Policy types enabled on the root. Authoritative. When importing an organization, set it to what is live. | `set(string)` | <pre>[<br/>  "SERVICE_CONTROL_POLICY"<br/>]</pre> | no |
 | <a name="input_organizational_units"></a> [organizational\_units](#input\_organizational\_units) | OU paths from the root: "Name" or "Parent/Child". A nested OU's parent must be listed too. | `set(string)` | `[]` | no |
