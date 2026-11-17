@@ -29,6 +29,8 @@
               prek
               tflint
               terraform-docs
+              # tests/forwarder.test.mjs
+              nodejs_24
             ];
           };
         }

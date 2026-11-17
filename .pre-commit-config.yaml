@@ -32,6 +32,12 @@ repos:
         entry: bash -c 'terraform init -backend=false -input=false >/dev/null && terraform test'
         files: \.(tf|tftest\.hcl)$
         pass_filenames: false
+      - id: forwarder-test
+        name: risk-alerts forwarder test
+        language: system
+        entry: node --test tests/forwarder.test.mjs
+        files: forwarder(\.test)?\.mjs$
+        pass_filenames: false
   - repo: https://github.com/kjanat/actionlint
     rev: v1.17.1
     hooks:

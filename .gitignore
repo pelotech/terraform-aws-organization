@@ -20,3 +20,6 @@ override.tf.json
 
 # Reusable module: consumers pin providers, so lock files aren't committed.
 .terraform.lock.hcl
+
+# Built by modules/risk-alerts at plan time.
+forwarder.zip
