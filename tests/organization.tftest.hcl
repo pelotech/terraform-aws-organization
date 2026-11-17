@@ -160,3 +160,36 @@ run "account_cannot_have_both_an_id_and_an_email" {
 
   expect_failures = [var.accounts]
 }
+
+run "root_access_is_off_by_default" {
+  command = plan
+
+  assert {
+    condition     = length(aws_iam_organizations_features.this) == 0 && toset(aws_organizations_organization.this.aws_service_access_principals) == toset(["sso.amazonaws.com"])
+    error_message = "centralized root access should be off, and IAM should not be a trusted service, unless asked for"
+  }
+}
+
+run "root_access_turns_on_both_features" {
+  command = plan
+
+  variables {
+    trusted_services        = ["iam.amazonaws.com", "sso.amazonaws.com"]
+    centralized_root_access = true
+  }
+
+  assert {
+    condition     = toset(aws_iam_organizations_features.this[0].enabled_features) == toset(["RootCredentialsManagement", "RootSessions"])
+    error_message = "both root access features should be enabled"
+  }
+}
+
+run "root_access_needs_iam_trusted_access" {
+  command = plan
+
+  variables {
+    centralized_root_access = true
+  }
+
+  expect_failures = [var.centralized_root_access]
+}
