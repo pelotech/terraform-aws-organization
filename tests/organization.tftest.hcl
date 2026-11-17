@@ -160,3 +160,40 @@ run "account_cannot_have_both_an_id_and_an_email" {
 
   expect_failures = [var.accounts]
 }
+
+run "delegated_administrators_by_account_name" {
+  command = plan
+
+  variables {
+    trusted_services = ["sso.amazonaws.com", "health.amazonaws.com", "securityhub.amazonaws.com"]
+    accounts = {
+      management = { id = "111111111111" }
+      security   = { id = "222222222222" }
+    }
+    delegated_administrators = {
+      security = ["health.amazonaws.com", "securityhub.amazonaws.com"]
+    }
+  }
+
+  assert {
+    condition     = toset(keys(aws_organizations_delegated_administrator.this)) == toset(["security/health.amazonaws.com", "security/securityhub.amazonaws.com"])
+    error_message = "one delegation per (account, service)"
+  }
+
+  assert {
+    condition     = aws_organizations_delegated_administrator.this["security/health.amazonaws.com"].account_id == "222222222222"
+    error_message = "the account name should resolve to its ID"
+  }
+}
+
+run "delegated_administrator_must_be_a_listed_account" {
+  command = plan
+
+  variables {
+    delegated_administrators = {
+      missing = ["health.amazonaws.com"]
+    }
+  }
+
+  expect_failures = [var.delegated_administrators]
+}
