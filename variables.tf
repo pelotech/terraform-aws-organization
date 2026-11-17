@@ -47,6 +47,33 @@ variable "service_control_policies" {
   description = "Policy name (see policies.tf) => where it attaches: \"Root\" or OU paths. OUs below a target inherit it."
 }
 
+variable "policies" {
+  type = map(object({
+    type        = optional(string, "SERVICE_CONTROL_POLICY")
+    description = optional(string)
+    content     = string
+    targets     = set(string)
+  }))
+  default     = {}
+  description = <<-EOT
+    The organization's own policies, for anything the library in policies.tf doesn't cover. Policy name => settings:
+      - type: SERVICE_CONTROL_POLICY (default), RESOURCE_CONTROL_POLICY, TAG_POLICY or another policy type. It must be in enabled_policy_types.
+      - description: optional.
+      - content: the policy document as JSON, for example from jsonencode or aws_iam_policy_document.
+      - targets: where it attaches: "Root" or OU paths. OUs below a target inherit it.
+  EOT
+
+  validation {
+    condition     = alltrue([for policy in values(var.policies) : contains(var.enabled_policy_types, policy.type)])
+    error_message = "Each policy's type must be in enabled_policy_types."
+  }
+
+  validation {
+    condition     = length(setintersection(keys(var.policies), keys(var.service_control_policies))) == 0
+    error_message = "A policy name is used both here and in service_control_policies; rename one."
+  }
+}
+
 variable "accounts" {
   type = map(object({
     id     = optional(string)
