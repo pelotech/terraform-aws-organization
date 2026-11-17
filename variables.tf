@@ -39,14 +39,15 @@ variable "accounts" {
   default     = {}
   description = <<-EOT
     Account name => settings. List every account, including the management account.
-      - id: the account ID. Omit only for an account this module creates.
-      - email: root email. Set it to manage the account here (create or import).
+    Set exactly one of id and email.
+      - id: the account ID, for an account that is only listed for lookup.
+      - email: root email, for an account managed here (created or imported).
       - name: account name in AWS, when it differs from the key.
       - parent: "Root" or an OU path. Only used for accounts managed here.
   EOT
 
   validation {
-    condition     = alltrue([for account in values(var.accounts) : account.id != null || account.email != null])
-    error_message = "Each account needs an id, an email, or both."
+    condition     = alltrue([for account in values(var.accounts) : (account.id == null) != (account.email == null)])
+    error_message = "Set id (listed for lookup only) or email (managed here) on each account, not both."
   }
 }

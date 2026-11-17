@@ -2,13 +2,6 @@
 
 One AWS organization in code: its trusted services, organizational units (OUs), service control policies (SCPs) and member accounts. A submodule manages IAM Identity Center access. Written for Terraform; it also works with OpenTofu.
 
-| Input | Manages |
-| ----- | ------- |
-| `trusted_services`, `enabled_policy_types` | The organization itself: which AWS services have trusted access and which policy types are enabled. |
-| `organizational_units` | OUs, given as paths from the root (`"Workloads"`, `"Workloads/Prod"`). |
-| `service_control_policies` | Which built-in policy attaches to the root or to which OUs. |
-| `accounts` | Member accounts: which exist, and for managed ones their name, email and parent OU. |
-
 [`modules/identity-center`](modules/identity-center/) manages permission sets and which group gets which permission set on which accounts.
 
 The module declares no provider blocks and is partition-aware, so the same code works in commercial and GovCloud.
@@ -40,8 +33,8 @@ module "organization" {
 
   accounts = {
     management = { id = "111111111111" }
-    security   = { id = "222222222222", email = "aws-security@example.com", parent = "Security" }
-    prod       = { id = "333333333333", email = "aws-prod@example.com", parent = "Workloads/Prod" }
+    security   = { email = "aws-security@example.com", parent = "Security" }
+    prod       = { email = "aws-prod@example.com", parent = "Workloads/Prod" }
   }
 }
 
@@ -65,20 +58,24 @@ An OU exists to carry policy. Add one only when its accounts need different rule
 
 A map of policy name => where it attaches: `"Root"` or OU paths. OUs and accounts below a target inherit the policy. Service control policies never apply to the management account.
 
-The policies themselves are defined in [`policies.tf`](policies.tf). To add one, add an entry to `local.policies` there.
-
-| Policy | Effect |
-| ------ | ------ |
-| `deny-leave-organization` | Accounts cannot remove themselves from the organization. |
+The policies and what each one does are defined in [`policies.tf`](policies.tf). To add one, add an entry to `local.policies` there.
 
 ## Accounts (`accounts`)
 
-List every account once, including the management account. Each entry is name => settings:
+List every account once, including the management account. Each entry is name => settings, with exactly one of `id` and `email`:
 
-- **`id` only:** the account is listed so other code can look it up in the `account_ids` output. Nothing about it is managed.
-- **`email` set:** the account is managed here: its name (the key, or `name`), root email and parent OU (`parent`, default `"Root"`). With no `id`, the module creates the account.
+- **`id`:** the account is listed so other code can look it up in the `account_ids` output. Nothing about it is managed.
+- **`email`:** the account is managed here: its name (the key, or `name`), root email and parent OU (`parent`, default `"Root"`). The module creates the account unless you import it.
 
 To move an account, change its `parent`; the account is moved in place. Changing a managed account's `email` forces a replacement, so treat root emails as fixed.
+
+To stop managing an account, take it out of state first, then remove its entry or switch it to `id`:
+
+```sh
+terraform state rm 'module.organization.aws_organizations_account.this["prod"]'
+```
+
+Without that step the plan fails on `prevent_destroy`. A `removed` block cannot do this, because it cannot target one instance of a resource.
 
 ## Adopting an existing organization
 
@@ -155,7 +152,7 @@ No modules.
 
 | Name | Description | Type | Default | Required |
 | ---- | ----------- | ---- | ------- | :------: |
-| <a name="input_accounts"></a> [accounts](#input\_accounts) | Account name => settings. List every account, including the management account.<br/>  - id: the account ID. Omit only for an account this module creates.<br/>  - email: root email. Set it to manage the account here (create or import).<br/>  - name: account name in AWS, when it differs from the key.<br/>  - parent: "Root" or an OU path. Only used for accounts managed here. | <pre>map(object({<br/>    id     = optional(string)<br/>    email  = optional(string)<br/>    name   = optional(string)<br/>    parent = optional(string, "Root")<br/>  }))</pre> | `{}` | no |
+| <a name="input_accounts"></a> [accounts](#input\_accounts) | Account name => settings. List every account, including the management account.<br/>Set exactly one of id and email.<br/>  - id: the account ID, for an account that is only listed for lookup.<br/>  - email: root email, for an account managed here (created or imported).<br/>  - name: account name in AWS, when it differs from the key.<br/>  - parent: "Root" or an OU path. Only used for accounts managed here. | <pre>map(object({<br/>    id     = optional(string)<br/>    email  = optional(string)<br/>    name   = optional(string)<br/>    parent = optional(string, "Root")<br/>  }))</pre> | `{}` | no |
 | <a name="input_enabled_policy_types"></a> [enabled\_policy\_types](#input\_enabled\_policy\_types) | Policy types enabled on the root. Authoritative. When importing an organization, set it to what is live. | `list(string)` | <pre>[<br/>  "SERVICE_CONTROL_POLICY"<br/>]</pre> | no |
 | <a name="input_organizational_units"></a> [organizational\_units](#input\_organizational\_units) | OU paths from the root: "Name" or "Parent/Child". A nested OU's parent must be listed too. | `list(string)` | `[]` | no |
 | <a name="input_service_control_policies"></a> [service\_control\_policies](#input\_service\_control\_policies) | Policy name (see policies.tf) => where it attaches: "Root" or OU paths. OUs below a target inherit it. | `map(list(string))` | `{}` | no |

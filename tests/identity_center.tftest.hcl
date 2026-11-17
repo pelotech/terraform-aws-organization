@@ -48,7 +48,7 @@ variables {
   }
 }
 
-run "one_resource_per_policy_and_assignment" {
+run "permission_sets_policies_and_assignments" {
   command = plan
 
   module {
@@ -68,14 +68,6 @@ run "one_resource_per_policy_and_assignment" {
   assert {
     condition     = toset(keys(aws_ssoadmin_account_assignment.this)) == toset(["admins/AdministratorAccess/workloads", "operators/Operator/management", "operators/Operator/workloads"])
     error_message = "one assignment per (group, permission set, account)"
-  }
-}
-
-run "policies_and_accounts_resolve" {
-  command = plan
-
-  module {
-    source = "./modules/identity-center"
   }
 
   assert {

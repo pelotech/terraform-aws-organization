@@ -21,10 +21,9 @@ module "organization" {
 
   accounts = {
     management = { id = "111111111111" }
-    security   = { id = "222222222222", email = "aws-security@example.com", parent = "Security" }
-    prod       = { id = "333333333333", email = "aws-prod@example.com", parent = "Workloads/Prod" }
-    # No id: the module creates this account.
-    nonprod = { email = "aws-nonprod@example.com", parent = "Workloads/NonProd" }
+    security   = { email = "aws-security@example.com", parent = "Security" }
+    prod       = { email = "aws-prod@example.com", parent = "Workloads/Prod" }
+    nonprod    = { email = "aws-nonprod@example.com", parent = "Workloads/NonProd" }
   }
 }
 

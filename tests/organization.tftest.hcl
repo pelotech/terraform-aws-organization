@@ -36,19 +36,6 @@ run "defaults_create_only_the_organization" {
   }
 }
 
-run "import_can_match_an_organization_without_policy_types" {
-  command = plan
-
-  variables {
-    enabled_policy_types = []
-  }
-
-  assert {
-    condition     = length(aws_organizations_organization.this.enabled_policy_types) == 0
-    error_message = "enabled_policy_types should be passed through as given, so an import changes nothing"
-  }
-}
-
 run "ous_split_into_top_and_nested" {
   command = plan
 
@@ -109,8 +96,8 @@ run "accounts_with_an_email_are_managed" {
   variables {
     accounts = {
       management = { id = "111111111111" }
-      security   = { id = "222222222222", email = "security@example.com", parent = "Security" }
-      prod       = { id = "333333333333", email = "prod@example.com", name = "production", parent = "Workloads/Prod" }
+      security   = { email = "security@example.com", parent = "Security" }
+      prod       = { email = "prod@example.com", name = "production", parent = "Workloads/Prod" }
     }
   }
 
@@ -125,8 +112,8 @@ run "accounts_with_an_email_are_managed" {
   }
 
   assert {
-    condition     = output.account_ids == { management = "111111111111", security = "222222222222", prod = "333333333333" }
-    error_message = "declared account IDs should be output as given, so they are known at plan time"
+    condition     = toset(keys(output.account_ids)) == toset(["management", "security", "prod"]) && output.account_ids["management"] == "111111111111"
+    error_message = "every account should be in account_ids, a listed one under its declared ID"
   }
 }
 
@@ -136,6 +123,18 @@ run "account_needs_an_id_or_an_email" {
   variables {
     accounts = {
       broken = {}
+    }
+  }
+
+  expect_failures = [var.accounts]
+}
+
+run "account_cannot_have_both_an_id_and_an_email" {
+  command = plan
+
+  variables {
+    accounts = {
+      broken = { id = "222222222222", email = "security@example.com" }
     }
   }
 

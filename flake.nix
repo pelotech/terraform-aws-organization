@@ -1,70 +1,37 @@
 {
-  description = "Flake config";
+  description = "terraform-aws-organization";
 
-  inputs = {
-    flake-parts.url = "github:hercules-ci/flake-parts";
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    treefmt-nix.url = "github:numtide/treefmt-nix";
-  };
+  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
   outputs =
-    inputs@{ flake-parts, ... }:
-    flake-parts.lib.mkFlake { inherit inputs; } {
-      imports = [ inputs.treefmt-nix.flakeModule ];
-      systems = [
+    { nixpkgs, ... }:
+    let
+      forAllSystems = nixpkgs.lib.genAttrs [
         "x86_64-linux"
         "aarch64-linux"
         "aarch64-darwin"
       ];
-      perSystem =
-        { pkgs, ... }:
+    in
+    {
+      # Everything pre-commit needs, locally and in CI.
+      devShells = forAllSystems (
+        system:
         let
-          # Everything pre-commit needs; this is all CI installs.
-          lintTools = with pkgs; [
-            # terraform: tenv's proxy installs the version in .terraform-version
-            # (min-required: the floor of required_version in versions.tf)
-            tenv
-            prek
-            tflint
-            hcledit
-            yamllint
-            terraform-docs
-            actionlint
-            zizmor
-          ];
-          env.TENV_AUTO_INSTALL = "true";
+          pkgs = nixpkgs.legacyPackages.${system};
         in
         {
-          devShells.ci = pkgs.mkShellNoCC {
-            inherit env;
-            packages = lintTools;
+          default = pkgs.mkShellNoCC {
+            env.TENV_AUTO_INSTALL = "true";
+            packages = with pkgs; [
+              # terraform: tenv's proxy installs the version in .terraform-version
+              # (min-required: the floor of required_version in versions.tf)
+              tenv
+              prek
+              tflint
+              terraform-docs
+            ];
           };
-
-          devShells.default = pkgs.mkShellNoCC {
-            inherit env;
-            packages =
-              lintTools
-              ++ (with pkgs; [
-                # sops
-                rage
-                age-plugin-yubikey
-                sops
-
-                # aws
-                awscli2
-                aws-sso-cli
-
-                just
-              ]);
-          };
-
-          treefmt = {
-            projectRootFile = "flake.nix";
-            # OpenTofu's fmt matches terraform fmt and is in the binary cache (terraform is unfree).
-            programs.terraform.enable = true;
-            programs.terraform.package = pkgs.opentofu;
-            programs.nixfmt.enable = true;
-          };
-        };
+        }
+      );
     };
 }

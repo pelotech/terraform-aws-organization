@@ -18,14 +18,8 @@ jobs:
       - uses: cachix/install-nix-action@75c75c31ebece974e48ebc36b4ad125bd97bd97b # v31
         with:
           github_access_token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Put nix devshell tools and env on PATH
-        shell: bash
-        run: | # zizmor: ignore[github-env]
-          nix develop .#ci -c printenv PATH >> "$GITHUB_PATH"
-          # TENV_* is defined once in flake.nix; the token avoids GitHub API rate limits
-          nix develop .#ci -c printenv | { grep '^TENV_' || true; } >> "$GITHUB_ENV"
-          echo "TENV_GITHUB_TOKEN=$GH_TOKEN" >> "$GITHUB_ENV"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: prek
-        run: prek run --all-files --show-diff-on-failure
+        run: nix develop -c prek run --all-files --show-diff-on-failure
+        env:
+          # Avoids GitHub API rate limits when tenv installs terraform.
+          TENV_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

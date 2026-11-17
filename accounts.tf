@@ -1,5 +1,5 @@
 # Member accounts. An entry with an email is managed here (created or
-# imported); the rest are listed only so other code can look up their IDs.
+# imported); an entry with an id is listed only so other code can look it up.
 
 resource "aws_organizations_account" "this" {
   for_each  = { for name, account in var.accounts : name => account if account.email != null }
@@ -13,9 +13,9 @@ resource "aws_organizations_account" "this" {
 }
 
 locals {
-  # Account name => ID. A declared ID wins, so it is known at plan time.
+  # Account name => ID: the real ID of a managed account, the declared ID otherwise.
   account_ids = {
     for name, account in var.accounts :
-    name => account.id != null ? account.id : aws_organizations_account.this[name].id
+    name => account.email != null ? aws_organizations_account.this[name].id : account.id
   }
 }
