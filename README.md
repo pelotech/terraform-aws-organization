@@ -85,6 +85,23 @@ policies = {
 
 `type` defaults to `SERVICE_CONTROL_POLICY` and must be in `enabled_policy_types`. A name cannot be used both here and in `service_control_policies`. AWS keeps tested starting points for [service control policies](https://github.com/aws-samples/service-control-policy-examples) and [resource control policies](https://github.com/aws-samples/resource-control-policy-examples); attach a new policy to a test OU first.
 
+For example, to opt every account out of AWS using the organization's content to improve its AI services, so that no policy lower down can opt back in:
+
+```hcl
+enabled_policy_types = ["SERVICE_CONTROL_POLICY", "AISERVICES_OPT_OUT_POLICY"]
+
+policies = {
+  ai-services-opt-out = {
+    type = "AISERVICES_OPT_OUT_POLICY"
+    content = jsonencode({ services = { default = { opt_out_policy = {
+      "@@assign"                               = "optOut"
+      "@@operators_allowed_for_child_policies" = ["@@none"]
+    } } } })
+    targets = ["Root"]
+  }
+}
+```
+
 ## Centralized root access (`centralized_root_access`)
 
 Set it to `true` to turn on IAM's `RootCredentialsManagement` and `RootSessions` features for the organization. It needs `iam.amazonaws.com` in `trusted_services`; the plan fails without it.
