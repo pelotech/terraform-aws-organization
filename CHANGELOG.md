@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.1](https://github.com/pelotech/terraform-aws-organization/compare/v0.3.0...v0.3.1) (2026-11-19)
+
+
+### Chores
+
+* **renovate:** group github actions minor and patch updates into one pr ([#14](https://github.com/pelotech/terraform-aws-organization/issues/14)) ([3235033](https://github.com/pelotech/terraform-aws-organization/commit/323503399ec3520e0d459578e078193781829a71))
+
+
+### Docs
+
+* example AI services opt-out policy ([#12](https://github.com/pelotech/terraform-aws-organization/issues/12)) ([4833182](https://github.com/pelotech/terraform-aws-organization/commit/483318246ff12bbf146f3c1b1cbe7569af3a2f66))
+
 ## [0.3.0](https://github.com/pelotech/terraform-aws-organization/compare/v0.2.0...v0.3.0) (2026-11-17)
 
 
